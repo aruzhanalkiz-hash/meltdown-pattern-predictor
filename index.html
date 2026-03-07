@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meltdown Pattern Predictor</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="container">
+        <h1>Meltdown Pattern Predictor</h1>
+        <p class="subtitle">
+            Track daily factors and identify possible meltdown triggers.
+        </p>
+
+        <div class="card">
+            <h2>Add Daily Log</h2>
+
+            <form id="logForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sleepHours">Sleep Hours</label>
+                        <input type="number" id="sleepHours" min="0" max="24" step="0.5" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noiseLevel">Noise Level</label>
+                        <select id="noiseLevel" required>
+                            <option value="">Choose</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sugarAfter6">Sugar After 6 PM</label>
+                        <select id="sugarAfter6" required>
+                            <option value="">Choose</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="screenAfter7">Screen Time After 7 PM</label>
+                        <select id="screenAfter7" required>
+                            <option value="">Choose</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="routineChange">Routine Change</label>
+                        <select id="routineChange" required>
+                            <option value="">Choose</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mealAfter7">Meal After 7 PM</label>
+                        <select id="mealAfter7" required>
+                            <option value="">Choose</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="meltdownOccurred">Meltdown Occurred</label>
+                        <select id="meltdownOccurred" required>
+                            <option value="">Choose</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button type="submit">Save Log</button>
+                    <button type="button" id="sampleDataBtn" class="secondary">Load Sample Data</button>
+                    <button type="button" id="analyzeBtn" class="secondary">Analyze Patterns</button>
+                    <button type="button" id="clearBtn" class="danger">Clear All Data</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Saved Logs</h2>
+            <div id="emptyState">No logs yet.</div>
+            <div class="table-wrapper">
+                <table id="logsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Sleep</th>
+                            <th>Noise</th>
+                            <th>Sugar After 6</th>
+                            <th>Screen After 7</th>
+                            <th>Routine Change</th>
+                            <th>Meal After 7</th>
+                            <th>Meltdown</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Insights</h2>
+            <div id="insights">
+                Click <strong>Analyze Patterns</strong> to see possible triggers.
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
