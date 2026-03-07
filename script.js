@@ -90,7 +90,7 @@ function analyzePatterns() {
                 "Lower sleep may increase stress, irritability, or sensitivity to sensory input.",
         },
         {
-            name: "High noise level",
+            name: "High sensory environment",
             data: meltdownRate((log) => log.noiseLevel === "High"),
             explanation:
                 "Loud environments may contribute to sensory overload and emotional distress.",
@@ -114,7 +114,7 @@ function analyzePatterns() {
                 "Unexpected routine changes may increase anxiety and difficulty with transitions.",
         },
         {
-            name: "Meal after 7 PM",
+            name: "Late meal",
             data: meltdownRate((log) => log.mealAfter7 === "Yes"),
             explanation:
                 "Late meals may be connected to discomfort, disrupted routine, or sleep issues.",
