@@ -96,16 +96,16 @@ function analyzePatterns() {
                 "Loud environments may contribute to sensory overload and emotional distress.",
         },
         {
-            name: "Sugar after 6 PM",
+            name: "Late sugar intake",
             data: meltdownRate((log) => log.sugarAfter6 === "Yes"),
             explanation:
-                "Late sugar intake may be linked to energy spikes or disrupted regulation.",
+                "Late sugar intake may be linked to energy spikes and difficulty regulating emotions.",
         },
         {
-            name: "Screen time after 7 PM",
+            name: "Late screen exposure",
             data: meltdownRate((log) => log.screenAfter7 === "Yes"),
             explanation:
-                "Late screen time may affect winding down, sleep quality, and emotional regulation.",
+                "Late screen exposure may interfere with sleep preparation and emotional regulation.",
         },
         {
             name: "Routine change",
