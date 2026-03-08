@@ -128,7 +128,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Help Chatbot -->
+    <button type="button" id="chatbotFab" class="chatbot-fab" aria-label="Open help">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+    <div id="chatbotPanel" class="chatbot-panel" aria-hidden="true">
+        <div class="chatbot-header">
+            <h3>Help</h3>
+            <button type="button" id="chatbotClose" class="chatbot-close" aria-label="Close">×</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages"></div>
+        <div class="chatbot-quick-prompts" id="chatbotQuickPrompts">
+            <button type="button" class="chatbot-quick-btn" data-prompt="How does this app work?">How does this work?</button>
+            <button type="button" class="chatbot-quick-btn" data-prompt="What does the chart and the insights mean?">What does my chart mean?</button>
+            <button type="button" class="chatbot-quick-btn" data-prompt="What are some general tips for sleep and routine to reduce meltdowns?">Tips for better sleep & routine</button>
+        </div>
+        <div class="chatbot-input-wrap">
+            <textarea id="chatbotInput" placeholder="Ask anything..." rows="1"></textarea>
+            <button type="button" id="chatbotSend" class="chatbot-send">Send</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
 

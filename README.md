@@ -37,9 +37,11 @@ Parents, guardians, and caregivers of children on the autism spectrum who want t
 ## Getting Started
 
 1. Clone or download this repo
-2. Open `index.html` in a web browser (or serve the folder with any static file server)
-3. Add daily logs—or click **Load Sample Data** to see how it works
-4. Click **Analyze Patterns** to view insights and top triggers
+2. **For AI help:** Add your OpenAI API key in `config.js`
+3. Open `index.html` in a web browser (or serve the folder with any static file server)
+4. Add daily logs—or click **Load Sample Data** to see how it works
+5. Click **Analyze Patterns** to view insights and top triggers
+6. Click the **Help** button (bottom-right) to ask the AI assistant anything
 
 No installation or sign-up required.
 
@@ -49,6 +51,7 @@ No installation or sign-up required.
 
 - **HTML / CSS / JavaScript** – Vanilla front-end
 - **Chart.js** – Visualizations
+- **OpenAI API** – AI help chatbot (gpt-4o-mini)
 - **localStorage** – Client-side data persistence
 
 ---

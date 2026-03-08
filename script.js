@@ -442,3 +442,200 @@ if (getLogs().length === 0) {
     saveLogs(getDefaultSampleLogs());
 }
 renderLogs();
+
+/* ============================================
+   Help Chatbot (OpenAI)
+   ============================================ */
+
+const CHATBOT_SYSTEM_PROMPT = `You are a warm, supportive help assistant for the Meltdown Pattern Predictor app. This app helps caregivers of autistic children track daily factors (sleep, sensory environment, sugar, screen time, routine changes, meals) and identify patterns that may correlate with meltdowns.
+
+Your role:
+- Explain how to use the app (logging, analyzing, reading the chart)
+- Explain what each field means (Sensory Environment = noise level, Late Sugar = after 6pm, etc.)
+- Help users understand the chart and insights (meltdown rate when condition present vs absent)
+- Offer general, supportive tips for common triggers—never medical or behavioral diagnosis
+- Be concise but caring; caregivers are often exhausted
+
+Rules:
+- Never diagnose autism or prescribe treatments
+- Always recommend consulting healthcare providers for medical/behavioral advice
+- Keep answers practical and actionable
+- Use simple language`;
+
+function getInsightsContext() {
+    const logs = getLogs();
+    if (logs.length < 3) return null;
+    try {
+        const patterns = [
+            { name: "Sleep below 7 hours", fn: (l) => Number(l.sleepHours) < 7 },
+            { name: "High sensory environment", fn: (l) => l.noiseLevel === "High" },
+            { name: "Late sugar intake", fn: (l) => l.sugarAfter6 === "Yes" },
+            { name: "Late screen exposure", fn: (l) => l.screenAfter7 === "Yes" },
+            { name: "Routine change", fn: (l) => l.routineChange === "Yes" },
+            { name: "Late meal", fn: (l) => l.mealAfter7 === "Yes" },
+        ];
+        const withRates = patterns.map((p) => ({
+            ...p,
+            present: meltdownRate(p.fn),
+            absent: meltdownRate((l) => !p.fn(l)),
+        }));
+        const top = withRates
+            .filter((p) => p.present)
+            .map((p) => ({
+                name: p.name,
+                lift: p.present.rate - (p.absent ? p.absent.rate : 0),
+            }))
+            .sort((a, b) => b.lift - a.lift)
+            .slice(0, 3);
+        const overall = meltdownRate(() => true);
+        return {
+            logCount: logs.length,
+            overallRate: overall.rate.toFixed(1),
+            topTriggers: top.map((t) => t.name),
+        };
+    } catch {
+        return null;
+    }
+}
+
+const chatbotFab = document.getElementById("chatbotFab");
+const chatbotPanel = document.getElementById("chatbotPanel");
+const chatbotClose = document.getElementById("chatbotClose");
+const chatbotMessages = document.getElementById("chatbotMessages");
+const chatbotQuickPrompts = document.getElementById("chatbotQuickPrompts");
+const chatbotInput = document.getElementById("chatbotInput");
+const chatbotSend = document.getElementById("chatbotSend");
+
+let chatHistory = [];
+let chatbotWelcomed = false;
+
+function appendMessage(role, content, isTyping = false) {
+    const div = document.createElement("div");
+    div.className = `chatbot-msg ${role}${isTyping ? " typing" : ""}`;
+    if (isTyping) {
+        div.innerHTML = '<div class="chatbot-typing-dots"><span></span><span></span><span></span></div>';
+    } else if (role === "bot" && typeof marked !== "undefined") {
+        div.innerHTML = marked.parse(content || "");
+    } else {
+        div.textContent = content;
+    }
+    chatbotMessages.appendChild(div);
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+}
+
+function removeTypingIndicator() {
+    const typing = chatbotMessages.querySelector(".chatbot-msg.typing");
+    if (typing) typing.remove();
+}
+
+function showWelcome() {
+    if (chatbotWelcomed) return;
+    chatbotWelcomed = true;
+    const ctx = getInsightsContext();
+    let msg = "Hi! I'm here to help. Ask me about using the app, understanding your insights, or general tips for supporting your child. I'm not a substitute for professional advice—always consult healthcare providers for medical questions.";
+    if (ctx) {
+        msg += `\n\n(You have ${ctx.logCount} logs with an overall meltdown rate of ${ctx.overallRate}%. Your top possible triggers: ${ctx.topTriggers.join(", ")})`;
+    }
+    appendMessage("bot", msg);
+}
+
+chatbotFab.addEventListener("click", () => {
+    chatbotPanel.classList.add("open");
+    chatbotPanel.setAttribute("aria-hidden", "false");
+    showWelcome();
+});
+
+chatbotClose.addEventListener("click", () => {
+    chatbotPanel.classList.remove("open");
+    chatbotPanel.setAttribute("aria-hidden", "true");
+});
+
+async function sendToOpenAI(userMsg) {
+    const apiKey = typeof OPENAI_API_KEY !== "undefined" ? OPENAI_API_KEY : "";
+    if (!apiKey || apiKey === "your-openai-api-key-here") {
+        appendMessage("bot", "AI help isn't configured. Add your OpenAI API key in config.js to enable smart help.");
+        return;
+    }
+
+    const ctx = getInsightsContext();
+    const contextStr = ctx
+        ? `\n\nCurrent user data: ${ctx.logCount} logs, overall meltdown rate ${ctx.overallRate}%, top triggers: ${ctx.topTriggers.join(", ")}.`
+        : "";
+
+    chatHistory.push({ role: "user", content: userMsg });
+    const messages = [
+        { role: "system", content: CHATBOT_SYSTEM_PROMPT + contextStr },
+        ...chatHistory.slice(-12).map((m) => ({ role: m.role, content: m.content })),
+    ];
+
+    appendMessage("bot", "", true);
+    const typingEl = chatbotMessages.lastElementChild;
+
+    try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages,
+                max_tokens: 500,
+                temperature: 0.7,
+            }),
+        });
+
+        removeTypingIndicator();
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            appendMessage("bot", "Sorry, I couldn't get a response. Please check your API key and try again.");
+            return;
+        }
+
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content?.trim() || "I'm not sure how to respond.";
+        chatHistory.push({ role: "assistant", content: reply });
+        appendMessage("bot", reply);
+    } catch (err) {
+        removeTypingIndicator();
+        appendMessage("bot", "Something went wrong. Please check your internet connection and try again.");
+    }
+}
+
+function sendChatMessage() {
+    const text = chatbotInput.value.trim();
+    if (!text) return;
+    appendMessage("user", text);
+    chatbotInput.value = "";
+    chatbotInput.style.height = "auto";
+    chatbotSend.disabled = true;
+    sendToOpenAI(text).finally(() => (chatbotSend.disabled = false));
+}
+
+chatbotSend.addEventListener("click", sendChatMessage);
+
+chatbotInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+});
+
+chatbotQuickPrompts.querySelectorAll(".chatbot-quick-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const prompt = btn.getAttribute("data-prompt");
+        if (prompt) {
+            appendMessage("user", prompt);
+            chatbotQuickPrompts.style.display = "none";
+            chatbotSend.disabled = true;
+            sendToOpenAI(prompt).finally(() => (chatbotSend.disabled = false));
+        }
+    });
+});
+
+chatbotInput.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = Math.min(this.scrollHeight, 120) + "px";
+});
