@@ -67,6 +67,7 @@ function renderLogs() {
 
     toShow.forEach((log) => {
         const row = document.createElement("tr");
+        const meltdownClass = log.meltdownOccurred === "Yes" ? "meltdown-yes" : "meltdown-no";
         row.innerHTML = `
       <td>${log.date}</td>
       <td>${log.sleepHours}</td>
@@ -75,7 +76,7 @@ function renderLogs() {
       <td>${log.screenAfter7}</td>
       <td>${log.routineChange}</td>
       <td>${log.mealAfter7}</td>
-      <td>${log.meltdownOccurred}</td>
+      <td class="${meltdownClass}">${log.meltdownOccurred}</td>
     `;
         logsTableBody.appendChild(row);
     });
@@ -236,7 +237,7 @@ function analyzePatterns() {
     }
 
     html += `
-    <div class="warning-box">
+    <div class="disclaimer-box">
       <strong>Important:</strong> This tool does not diagnose autism or predict behavior with certainty.
       It is designed to help caregivers notice patterns that may support better routine planning and understanding.
     </div>
@@ -305,7 +306,7 @@ clearBtn.addEventListener("click", function () {
       <h2>Trigger Visualization</h2>
       <canvas id="triggerChart"></canvas>
     </div>
-    Click <strong>Analyze Patterns</strong> to see possible triggers.`;
+    <p class="insights-prompt">Click <strong>Analyze Patterns</strong> to see possible triggers.</p>`;
 });
 
 let triggerChartInstance = null;
@@ -340,21 +341,40 @@ function drawTriggerChart(patterns) {
                 {
                     label: "When condition present",
                     data: whenPresentValues,
-                    backgroundColor: "rgba(220, 38, 38, 0.7)",
+                    backgroundColor: "rgba(249, 168, 212, 0.85)",
+                    borderColor: "rgba(236, 72, 153, 0.5)",
+                    borderWidth: 1,
                 },
                 {
                     label: "When condition absent",
                     data: whenAbsentValues,
-                    backgroundColor: "rgba(34, 197, 94, 0.7)",
+                    backgroundColor: "rgba(134, 239, 172, 0.85)",
+                    borderColor: "rgba(34, 197, 94, 0.5)",
+                    borderWidth: 1,
                 },
             ],
         },
         options: {
+            font: {
+                family: "'Plus Jakarta Sans', system-ui, sans-serif",
+            },
+            color: "#292524",
             scales: {
                 y: {
                     beginAtZero: true,
                     max: 100,
                     title: { display: true, text: "Meltdown rate (%)" },
+                    grid: { color: "rgba(124, 58, 237, 0.08)" },
+                    ticks: { color: "#78716C" },
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: "#78716C", maxRotation: 45 },
+                },
+            },
+            plugins: {
+                legend: {
+                    labels: { font: { family: "'Plus Jakarta Sans', system-ui, sans-serif" } },
                 },
             },
         },
