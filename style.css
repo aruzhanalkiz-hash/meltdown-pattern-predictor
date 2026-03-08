@@ -220,7 +220,7 @@ button[type="submit"]:hover {
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
 }
 
-/* Secondary — Load Sample, Analyze, Toggle */
+/* Secondary — Analyze, etc. */
 button.secondary {
     background: var(--color-purple-pastel);
     color: #5B21B6;
@@ -231,13 +231,13 @@ button.secondary:hover {
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
 }
 
-/* Secondary variant — Load Sample (more yellow) */
-#sampleDataBtn {
+/* Predict Risk — yellow accent */
+button.predict-btn {
     background: var(--color-yellow-soft);
     color: #854D0E;
 }
 
-#sampleDataBtn:hover {
+button.predict-btn:hover {
     background: var(--color-yellow-medium);
     box-shadow: 0 2px 8px rgba(234, 179, 8, 0.25);
 }
@@ -306,6 +306,48 @@ td.meltdown-no {
     color: var(--color-text-muted);
 }
 
+.saved-logs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.saved-logs-header h2 {
+    margin-bottom: 0;
+}
+
+button.compact {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.log-delete-cell {
+    width: 36px;
+    padding: 6px 8px !important;
+    vertical-align: middle;
+}
+
+.log-delete-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    line-height: 1;
+    background: transparent;
+    color: var(--color-text-muted);
+    border: 1px solid transparent;
+    transition: color 0.2s, background 0.2s;
+}
+
+.log-delete-btn:hover {
+    background: var(--color-pink-pastel);
+    color: #9D174D;
+    border-color: rgba(236, 72, 153, 0.3);
+}
+
 #emptyState {
     color: var(--color-text-muted);
     font-size: 0.95rem;
@@ -367,6 +409,63 @@ td.meltdown-no {
 
 .disclaimer-box strong {
     color: #9D174D;
+}
+
+/* Contributor chart (prediction risk factors) */
+.contributor-chart-wrap {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(237, 233, 254, 0.5);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+}
+
+.contributor-chart-label {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 12px;
+}
+
+.contributor-chart-wrap canvas {
+    height: 180px !important;
+}
+
+/* What-if scenarios */
+.what-if-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.what-if-title {
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.what-if-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.what-if-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    background: var(--color-purple-tint);
+    color: #5B21B6;
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.what-if-btn:hover {
+    background: var(--color-purple-pastel);
+    transform: translateY(-1px);
 }
 
 /* Nested card inside insights (chart container) */

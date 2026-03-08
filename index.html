@@ -88,20 +88,23 @@
 
                 <div class="button-row">
                     <button type="submit">Save Log</button>
-                    <button type="button" id="sampleDataBtn" class="secondary">Load Sample Data</button>
+                    <button type="button" id="predictBtn" class="predict-btn">Predict Risk</button>
                     <button type="button" id="analyzeBtn" class="secondary">Analyze Patterns</button>
-                    <button type="button" id="clearBtn" class="danger">Clear All Data</button>
                 </div>
             </form>
         </div>
 
         <div class="card">
-            <h2>Saved Logs</h2>
+            <div class="saved-logs-header">
+                <h2>Saved Logs</h2>
+                <button type="button" id="clearBtn" class="danger compact">Clear All</button>
+            </div>
             <div id="emptyState">No logs yet.</div>
             <div class="table-wrapper">
                 <table id="logsTable">
                     <thead>
                         <tr>
+                            <th></th>
                             <th>Date</th>
                             <th>Sleep</th>
                             <th>Noise</th>
@@ -115,6 +118,11 @@
                     <tbody></tbody>
                 </table>
             </div>
+        </div>
+
+        <div class="card" id="predictionCard" style="display: none;">
+            <h2>Risk Prediction</h2>
+            <div id="predictionResult"></div>
         </div>
 
         <div class="card">

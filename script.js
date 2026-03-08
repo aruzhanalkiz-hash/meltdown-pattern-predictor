@@ -30,13 +30,23 @@ const logForm = document.getElementById("logForm");
 const logsTableBody = document.querySelector("#logsTable tbody");
 const emptyState = document.getElementById("emptyState");
 const insightsDiv = document.getElementById("insights");
-const sampleDataBtn = document.getElementById("sampleDataBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const clearBtn = document.getElementById("clearBtn");
+const predictBtn = document.getElementById("predictBtn");
+const predictionCard = document.getElementById("predictionCard");
+const predictionResult = document.getElementById("predictionResult");
 
 function getLogs() {
     const logs = localStorage.getItem(STORAGE_KEY);
-    return logs ? JSON.parse(logs) : [];
+    const parsed = logs ? JSON.parse(logs) : [];
+    const needsMigration = parsed.some((l) => !l.id);
+    if (needsMigration) {
+        parsed.forEach((log, i) => {
+            if (!log.id) log.id = "legacy-" + i + "-" + Date.now();
+        });
+        saveLogs(parsed);
+    }
+    return parsed;
 }
 
 function saveLogs(logs) {
@@ -49,10 +59,12 @@ function renderLogs() {
 
     if (logs.length === 0) {
         emptyState.style.display = "block";
+        if (clearBtn) clearBtn.style.display = "none";
         return;
     }
 
     emptyState.style.display = "none";
+    if (clearBtn) clearBtn.style.display = "";
 
     const sortedLogs = [...logs].sort((a, b) => (b.date > a.date ? 1 : -1));
 
@@ -60,6 +72,7 @@ function renderLogs() {
         const row = document.createElement("tr");
         const meltdownClass = log.meltdownOccurred === "Yes" ? "meltdown-yes" : "meltdown-no";
         row.innerHTML = `
+      <td class="log-delete-cell"><button type="button" class="log-delete-btn" data-id="${log.id}" aria-label="Remove this log">×</button></td>
       <td>${log.date}</td>
       <td>${log.sleepHours}</td>
       <td>${log.noiseLevel}</td>
@@ -71,13 +84,33 @@ function renderLogs() {
     `;
         logsTableBody.appendChild(row);
     });
+    logsTableBody.querySelectorAll(".log-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => removeLog(btn.getAttribute("data-id")));
+    });
 }
 
 function addLog(log) {
     const logs = getLogs();
+    log.id = log.id || "log-" + Date.now();
     logs.push(log);
     saveLogs(logs);
     renderLogs();
+}
+
+function removeLog(id) {
+    const logs = getLogs().filter((l) => l.id !== id);
+    saveLogs(logs);
+    renderLogs();
+    if (triggerChartInstance) {
+        triggerChartInstance.destroy();
+        triggerChartInstance = null;
+    }
+    insightsDiv.innerHTML = `
+        <div class="card">
+            <h2>Trigger Visualization</h2>
+            <canvas id="triggerChart"></canvas>
+        </div>
+        <p class="insights-prompt">Click <strong>Analyze Patterns</strong> to see possible triggers.</p>`;
 }
 
 function meltdownRate(conditionFn) {
@@ -253,21 +286,246 @@ logForm.addEventListener("submit", function (event) {
     logForm.reset();
 });
 
-sampleDataBtn.addEventListener("click", function () {
-    saveLogs(getDefaultSampleLogs());
-    renderLogs();
-    if (triggerChartInstance) {
-        triggerChartInstance.destroy();
-        triggerChartInstance = null;
-    }
-    insightsDiv.innerHTML = `
-    <div class="insight-box">
-      Sample data loaded. Now click <strong>Analyze Patterns</strong>.
-    </div>
-  `;
-});
-
 analyzeBtn.addEventListener("click", analyzePatterns);
+
+let predictGrid = null;
+
+async function loadPredictGrid() {
+    if (predictGrid) return predictGrid;
+    const res = await fetch("predict_grid.json");
+    if (!res.ok) throw new Error("Could not load prediction model");
+    predictGrid = await res.json();
+    return predictGrid;
+}
+
+function getPredictionKey(sleep, noise, sugar, screen, routine, meal) {
+    const sleepRounded = Math.round(Math.max(4, Math.min(12, parseFloat(sleep) || 7)) * 2) / 2;
+    const sleepStr = Number.isInteger(sleepRounded) ? sleepRounded + ".0" : String(sleepRounded);
+    return `${sleepStr}|${noise}|${sugar}|${screen}|${routine}|${meal}`;
+}
+
+function getTopContributors(sleep, noise, sugar, screen, routine, meal) {
+    const contrib = [];
+    if (parseFloat(sleep) < 7) contrib.push("Low sleep (<7h)");
+    if (noise === "High") contrib.push("High sensory environment");
+    if (noise === "Medium") contrib.push("Medium sensory environment");
+    if (routine === "Yes") contrib.push("Routine change");
+    if (screen === "Yes") contrib.push("Late screen exposure");
+    if (sugar === "Yes") contrib.push("Late sugar intake");
+    if (meal === "Yes") contrib.push("Late meal");
+    return contrib;
+}
+
+let contributorChartInstance = null;
+
+function getContributorImpacts(contributors, sleep, noise, sugar, screen, routine, meal, currentProb) {
+    const fixedKey = (contrib) => {
+        if (contrib === "Low sleep (<7h)") return getPredictionKey("8", noise, sugar, screen, routine, meal);
+        if (contrib === "High sensory environment" || contrib === "Medium sensory environment") return getPredictionKey(sleep, "Low", sugar, screen, routine, meal);
+        if (contrib === "Routine change") return getPredictionKey(sleep, noise, sugar, screen, "No", meal);
+        if (contrib === "Late screen exposure") return getPredictionKey(sleep, noise, sugar, "No", routine, meal);
+        if (contrib === "Late sugar intake") return getPredictionKey(sleep, noise, "No", screen, routine, meal);
+        if (contrib === "Late meal") return getPredictionKey(sleep, noise, sugar, screen, routine, "No");
+        return null;
+    };
+    const withImpact = contributors
+        .map((name) => {
+            const key = fixedKey(name);
+            const pred = key ? predictGrid[key] : null;
+            const drop = pred ? currentProb - pred.probability : 0;
+            return { name, impact: Math.max(0, drop) };
+        })
+        .filter((x) => x.impact >= 0)
+        .sort((a, b) => b.impact - a.impact);
+    return withImpact;
+}
+
+function drawContributorChart(contributorsWithImpact) {
+    const ctx = document.getElementById("contributorChart");
+    if (!ctx) return;
+    if (contributorChartInstance) {
+        contributorChartInstance.destroy();
+        contributorChartInstance = null;
+    }
+    const labels = contributorsWithImpact.map((c) => c.name);
+    const maxImpact = Math.max(...contributorsWithImpact.map((c) => c.impact), 1);
+    const barData = contributorsWithImpact.map((c) =>
+        c.impact > 0 ? Math.round((c.impact / maxImpact) * 100) : 15
+    );
+    contributorChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [{
+                label: "Risk drop if fixed",
+                data: barData,
+                backgroundColor: "rgba(124, 58, 237, 0.25)",
+                borderColor: "rgba(124, 58, 237, 0.6)",
+                borderWidth: 2,
+                borderRadius: 6,
+            }],
+        },
+        options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 1.2,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false },
+            },
+            scales: {
+                x: { display: false, max: 100 },
+                y: {
+                    grid: { display: false },
+                    ticks: { font: { size: 13 }, color: "#78716C" },
+                },
+            },
+        },
+    });
+}
+
+function getWhatIfKey(contrib, sleep, noise, sugar, screen, routine, meal) {
+    if (contrib === "Low sleep (<7h)") return getPredictionKey("8", noise, sugar, screen, routine, meal);
+    if (contrib === "High sensory environment" || contrib === "Medium sensory environment") return getPredictionKey(sleep, "Low", sugar, screen, routine, meal);
+    if (contrib === "Routine change") return getPredictionKey(sleep, noise, sugar, screen, "No", meal);
+    if (contrib === "Late screen exposure") return getPredictionKey(sleep, noise, sugar, "No", routine, meal);
+    if (contrib === "Late sugar intake") return getPredictionKey(sleep, noise, "No", screen, routine, meal);
+    if (contrib === "Late meal") return getPredictionKey(sleep, noise, sugar, screen, routine, "No");
+    return null;
+}
+
+function getWhatIfLabel(contrib) {
+    if (contrib === "Low sleep (<7h)") return "Sleep 8h";
+    if (contrib === "High sensory environment" || contrib === "Medium sensory environment") return "Low sensory";
+    if (contrib === "Routine change") return "No routine change";
+    if (contrib === "Late screen exposure") return "No late screen";
+    if (contrib === "Late sugar intake") return "No late sugar";
+    if (contrib === "Late meal") return "No late meal";
+    return null;
+}
+
+function renderWhatIf(sleep, noise, sugar, screen, routine, meal, currentPred) {
+    const wrap = document.getElementById("whatIfSection");
+    if (!wrap) return;
+    const contributors = (currentPred.contributors && currentPred.contributors.length) ? currentPred.contributors : getTopContributors(sleep, noise, sugar, screen, routine, meal);
+    const withImpact = getContributorImpacts(contributors, sleep, noise, sugar, screen, routine, meal, currentPred.probability);
+    const suggestions = [];
+    for (const { name, impact } of withImpact) {
+        const key = getWhatIfKey(name, sleep, noise, sugar, screen, routine, meal);
+        const label = getWhatIfLabel(name);
+        if (key && label) {
+            const pred = predictGrid[key];
+            if (pred) suggestions.push({ label, key, pred });
+        }
+    }
+    if (suggestions.length === 0) {
+        wrap.innerHTML = "";
+        return;
+    }
+    wrap.innerHTML = `
+        <div class="what-if-title"><strong>What if?</strong> Click to see improved scenarios.</div>
+        <div class="what-if-btns">
+            ${suggestions.map((s) =>
+        `<button type="button" class="what-if-btn" data-key="${s.key}">
+                    ${s.label}: ${s.pred.probability}%
+                </button>`
+    ).join("")}
+        </div>
+    `;
+    wrap.querySelectorAll(".what-if-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const key = btn.getAttribute("data-key");
+            const pred = predictGrid[key];
+            if (pred) {
+                const [s, n, sug, scr, r, m] = key.split("|");
+                const tierClass = pred.tier === "Low" ? "insight-box" : pred.tier === "Medium" ? "warning-box" : "disclaimer-box";
+                const contrib = pred.contributors ? pred.contributors : getTopContributors(s, n, sug, scr, r, m);
+                const contribHtml = contrib.length ? `<br><br><strong>Risk factors:</strong> ${contrib.join(", ")}` : "";
+                const predBox = predictionResult.querySelector(".insight-box, .warning-box, .disclaimer-box");
+                if (predBox) {
+                    predBox.outerHTML = `
+                        <div class="${tierClass}">
+                            <strong>Estimated meltdown likelihood: ${pred.probability}%</strong>
+                            <br>Risk level: <strong>${pred.tier}</strong>${contribHtml}
+                        </div>
+                    `;
+                }
+                if (contributorChartInstance) {
+                    if (contrib.length) {
+                        const withImpact = getContributorImpacts(contrib, s, n, sug, scr, r, m, pred.probability);
+                        const use = withImpact.length ? withImpact : contrib.map((n) => ({ name: n, impact: 0 }));
+                        const maxI = Math.max(...use.map((c) => c.impact), 1);
+                        contributorChartInstance.data.labels = use.map((c) => c.name);
+                        contributorChartInstance.data.datasets[0].data = use.map((c) => Math.round((c.impact / maxI) * 100));
+                        contributorChartInstance.update();
+                    } else {
+                        contributorChartInstance.destroy();
+                        contributorChartInstance = null;
+                        const wrap = predictionResult.querySelector(".contributor-chart-wrap");
+                        if (wrap) wrap.remove();
+                    }
+                }
+            }
+        });
+    });
+}
+
+predictBtn.addEventListener("click", async function () {
+    const sleep = document.getElementById("sleepHours").value;
+    const noise = document.getElementById("noiseLevel").value;
+    const sugar = document.getElementById("sugarAfter6").value;
+    const screen = document.getElementById("screenAfter7").value;
+    const routine = document.getElementById("routineChange").value;
+    const meal = document.getElementById("mealAfter7").value;
+
+    if (!sleep || !noise || !sugar || !screen || !routine || !meal) {
+        predictionResult.innerHTML = '<div class="warning-box">Please fill in all factors above (Sleep, Sensory Environment, Late Sugar, Late Screen, Routine Change, Late Meal) to get a prediction.</div>';
+        predictionCard.style.display = "block";
+        predictionCard.scrollIntoView({ behavior: "smooth" });
+        return;
+    }
+
+    try {
+        predictBtn.disabled = true;
+        await loadPredictGrid();
+        const key = getPredictionKey(sleep, noise, sugar, screen, routine, meal);
+        const pred = predictGrid[key];
+        if (!pred) {
+            predictionResult.innerHTML = '<div class="warning-box">Prediction not available for this combination. Try rounding sleep to the nearest half hour.</div>';
+        } else {
+            const tierClass = pred.tier === "Low" ? "insight-box" : pred.tier === "Medium" ? "warning-box" : "disclaimer-box";
+            const contributors = (pred.contributors && pred.contributors.length) ? pred.contributors : getTopContributors(sleep, noise, sugar, screen, routine, meal);
+            const contribHtml = contributors.length ? `<br><br><strong>Risk factors today:</strong> ${contributors.join(", ")}` : "";
+            const chartHtml = contributors.length ? `
+                <div class="contributor-chart-wrap">
+                    <div class="contributor-chart-label">Bigger bar = bigger drop. Small bar = minimal effect.</div>
+                    <canvas id="contributorChart"></canvas>
+                </div>
+            ` : "";
+            predictionResult.innerHTML = `
+                <div class="${tierClass}">
+                    <strong>Estimated meltdown likelihood: ${pred.probability}%</strong>
+                    <br>Risk level: <strong>${pred.tier}</strong>${contribHtml}
+                </div>
+                ${chartHtml}
+                <div id="whatIfSection" class="what-if-section"></div>
+            `;
+            if (contributors.length) {
+                const withImpact = getContributorImpacts(contributors, sleep, noise, sugar, screen, routine, meal, pred.probability);
+                drawContributorChart(withImpact.length ? withImpact : contributors.map((n) => ({ name: n, impact: 0 })));
+            }
+            renderWhatIf(sleep, noise, sugar, screen, routine, meal, pred);
+        }
+        predictionCard.style.display = "block";
+        predictionCard.scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+        predictionResult.innerHTML = '<div class="warning-box">Prediction model could not be loaded. Make sure predict_grid.json is available.</div>';
+        predictionCard.style.display = "block";
+    } finally {
+        predictBtn.disabled = false;
+    }
+});
 
 clearBtn.addEventListener("click", function () {
     localStorage.removeItem(STORAGE_KEY);
@@ -552,10 +810,7 @@ chatbotClose.addEventListener("click", () => {
 
 async function sendToOpenAI(userMsg) {
     const apiKey = typeof OPENAI_API_KEY !== "undefined" ? OPENAI_API_KEY : "";
-    if (!apiKey || apiKey === "your-openai-api-key-here") {
-        appendMessage("bot", "AI help isn't configured. Add your OpenAI API key in config.js to enable smart help.");
-        return;
-    }
+    const useProxy = !apiKey || apiKey === "your-openai-api-key-here";
 
     const ctx = getInsightsContext();
     const contextStr = ctx
@@ -565,37 +820,54 @@ async function sendToOpenAI(userMsg) {
     chatHistory.push({ role: "user", content: userMsg });
     const messages = [
         { role: "system", content: CHATBOT_SYSTEM_PROMPT + contextStr },
-        ...chatHistory.slice(-12).map((m) => ({ role: m.role, content: m.content })),
+        ...chatHistory.slice(-12).map((m) => ({ role: m.role === "assistant" ? "assistant" : m.role, content: m.content })),
     ];
 
     appendMessage("bot", "", true);
-    const typingEl = chatbotMessages.lastElementChild;
 
     try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages,
-                max_tokens: 500,
-                temperature: 0.7,
-            }),
-        });
+        let res;
+        if (useProxy) {
+            res = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages }),
+            });
+        } else {
+            res = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o-mini",
+                    messages,
+                    max_tokens: 500,
+                    temperature: 0.7,
+                }),
+            });
+        }
 
         removeTypingIndicator();
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            appendMessage("bot", "Sorry, I couldn't get a response. Please check your API key and try again.");
+            const msg = useProxy && res.status === 500
+                ? "AI help isn't configured. Add OPENAI_API_KEY in Vercel environment variables."
+                : "Sorry, I couldn't get a response. Please try again.";
+            appendMessage("bot", msg);
             return;
         }
 
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content?.trim() || "I'm not sure how to respond.";
+        let reply;
+        if (useProxy) {
+            const data = await res.json();
+            reply = data.reply || "I'm not sure how to respond.";
+        } else {
+            const data = await res.json();
+            reply = data.choices?.[0]?.message?.content?.trim() || "I'm not sure how to respond.";
+        }
         chatHistory.push({ role: "assistant", content: reply });
         appendMessage("bot", reply);
     } catch (err) {
