@@ -26,18 +26,13 @@ function getDefaultSampleLogs() {
     ];
 }
 
-const LOGS_VISIBLE_COUNT = 6;
-
 const logForm = document.getElementById("logForm");
 const logsTableBody = document.querySelector("#logsTable tbody");
 const emptyState = document.getElementById("emptyState");
-const toggleLogsBtn = document.getElementById("toggleLogsBtn");
 const insightsDiv = document.getElementById("insights");
 const sampleDataBtn = document.getElementById("sampleDataBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const clearBtn = document.getElementById("clearBtn");
-
-let logsExpanded = false;
 
 function getLogs() {
     const logs = localStorage.getItem(STORAGE_KEY);
@@ -54,18 +49,14 @@ function renderLogs() {
 
     if (logs.length === 0) {
         emptyState.style.display = "block";
-        toggleLogsBtn.style.display = "none";
         return;
     }
 
     emptyState.style.display = "none";
 
     const sortedLogs = [...logs].sort((a, b) => (b.date > a.date ? 1 : -1));
-    const toShow = logsExpanded || logs.length <= LOGS_VISIBLE_COUNT
-        ? sortedLogs
-        : sortedLogs.slice(0, LOGS_VISIBLE_COUNT);
 
-    toShow.forEach((log) => {
+    sortedLogs.forEach((log) => {
         const row = document.createElement("tr");
         const meltdownClass = log.meltdownOccurred === "Yes" ? "meltdown-yes" : "meltdown-no";
         row.innerHTML = `
@@ -80,15 +71,6 @@ function renderLogs() {
     `;
         logsTableBody.appendChild(row);
     });
-
-    if (logs.length > LOGS_VISIBLE_COUNT) {
-        toggleLogsBtn.style.display = "inline-block";
-        toggleLogsBtn.textContent = logsExpanded
-            ? `Show less (${LOGS_VISIBLE_COUNT})`
-            : `View all (${logs.length})`;
-    } else {
-        toggleLogsBtn.style.display = "none";
-    }
 }
 
 function addLog(log) {
@@ -273,7 +255,6 @@ logForm.addEventListener("submit", function (event) {
 
 sampleDataBtn.addEventListener("click", function () {
     saveLogs(getDefaultSampleLogs());
-    logsExpanded = false;
     renderLogs();
     if (triggerChartInstance) {
         triggerChartInstance.destroy();
@@ -288,14 +269,8 @@ sampleDataBtn.addEventListener("click", function () {
 
 analyzeBtn.addEventListener("click", analyzePatterns);
 
-toggleLogsBtn.addEventListener("click", function () {
-    logsExpanded = !logsExpanded;
-    renderLogs();
-});
-
 clearBtn.addEventListener("click", function () {
     localStorage.removeItem(STORAGE_KEY);
-    logsExpanded = false;
     renderLogs();
     if (triggerChartInstance) {
         triggerChartInstance.destroy();
@@ -333,6 +308,14 @@ function drawTriggerChart(patterns) {
         p.whenAbsentData ? p.whenAbsentData.rate : null
     );
 
+    const createBarGradient = (chart, colorStops, datasetIndex) => {
+        const { chartArea } = chart;
+        if (!chartArea) return colorStops[0];
+        const g = chart.ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+        colorStops.forEach(([offset, color]) => g.addColorStop(offset, color));
+        return g;
+    };
+
     triggerChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
@@ -341,43 +324,117 @@ function drawTriggerChart(patterns) {
                 {
                     label: "When condition present",
                     data: whenPresentValues,
-                    backgroundColor: "rgba(249, 168, 212, 0.85)",
-                    borderColor: "rgba(236, 72, 153, 0.5)",
-                    borderWidth: 1,
+                    backgroundColor: (c) =>
+                        createBarGradient(c.chart, [
+                            [0, "rgba(251, 207, 232, 1)"],
+                            [1, "rgba(249, 168, 212, 1)"],
+                        ]),
+                    borderColor: "rgba(219, 39, 119, 0.6)",
+                    borderWidth: 2,
+                    borderRadius: 8,
                 },
                 {
                     label: "When condition absent",
                     data: whenAbsentValues,
-                    backgroundColor: "rgba(134, 239, 172, 0.85)",
-                    borderColor: "rgba(34, 197, 94, 0.5)",
-                    borderWidth: 1,
+                    backgroundColor: (c) =>
+                        createBarGradient(c.chart, [
+                            [0, "rgba(187, 247, 208, 1)"],
+                            [1, "rgba(134, 239, 172, 1)"],
+                        ]),
+                    borderColor: "rgba(22, 163, 74, 0.6)",
+                    borderWidth: 2,
+                    borderRadius: 8,
                 },
             ],
         },
         options: {
+            animation: {
+                duration: 600,
+            },
             font: {
                 family: "'Plus Jakarta Sans', system-ui, sans-serif",
+                size: 13,
             },
             color: "#292524",
+            layout: {
+                padding: { top: 20, right: 20, bottom: 10, left: 10 },
+            },
             scales: {
                 y: {
                     beginAtZero: true,
                     max: 100,
-                    title: { display: true, text: "Meltdown rate (%)" },
+                    title: {
+                        display: true,
+                        text: "Meltdown rate (%)",
+                        font: { size: 14, weight: "600" },
+                    },
                     grid: { color: "rgba(124, 58, 237, 0.08)" },
-                    ticks: { color: "#78716C" },
+                    ticks: { color: "#78716C", font: { size: 12 } },
+                    border: { display: false },
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: "#78716C", maxRotation: 45 },
+                    ticks: {
+                        color: "#78716C",
+                        maxRotation: 35,
+                        font: { size: 12 },
+                    },
+                    border: { display: false },
                 },
             },
+            barPercentage: 0.75,
+            categoryPercentage: 0.85,
             plugins: {
                 legend: {
-                    labels: { font: { family: "'Plus Jakarta Sans', system-ui, sans-serif" } },
+                    position: "top",
+                    align: "end",
+                    labels: {
+                        font: { family: "'Plus Jakarta Sans', system-ui, sans-serif", size: 13 },
+                        padding: 16,
+                        usePointStyle: true,
+                        pointStyle: "rectRounded",
+                        color: "#78716C",
+                    },
                 },
             },
         },
+        plugins: [
+            {
+                id: "chartAreaBackground",
+                beforeDraw: (chart) => {
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return;
+                    const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    g.addColorStop(0, "rgba(248, 247, 252, 0.95)");
+                    g.addColorStop(0.5, "rgba(243, 241, 250, 0.95)");
+                    g.addColorStop(1, "rgba(237, 234, 248, 0.95)");
+                    ctx.save();
+                    ctx.fillStyle = g;
+                    ctx.fillRect(chartArea.left, chartArea.top, chartArea.right - chartArea.left, chartArea.bottom - chartArea.top);
+                    ctx.restore();
+                },
+            },
+            {
+                id: "legendBackground",
+                beforeDraw: (chart) => {
+                    if (chart.legend?.visible) {
+                        const ctx = chart.ctx;
+                        const { top, left, width, height } = chart.legend;
+                        const pad = 12;
+                        ctx.save();
+                        ctx.fillStyle = "rgba(237, 233, 254, 0.7)";
+                        ctx.beginPath();
+                        if (typeof ctx.roundRect === "function") {
+                            ctx.roundRect(left - pad, top - 8, width + pad * 2, height + 16, 10);
+                        } else {
+                            ctx.rect(left - pad, top - 8, width + pad * 2, height + 16);
+                        }
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                },
+            },
+        ],
     });
 }
 
