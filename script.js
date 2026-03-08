@@ -302,20 +302,45 @@ function getTopContributors(sleep, noise, sugar, screen, routine, meal) {
 
 let contributorChartInstance = null;
 
-function drawContributorChart(contributors) {
+function getContributorImpacts(contributors, sleep, noise, sugar, screen, routine, meal, currentProb) {
+    const fixedKey = (contrib) => {
+        if (contrib === "Low sleep (<7h)") return getPredictionKey("8", noise, sugar, screen, routine, meal);
+        if (contrib === "High sensory environment" || contrib === "Medium sensory environment") return getPredictionKey(sleep, "Low", sugar, screen, routine, meal);
+        if (contrib === "Routine change") return getPredictionKey(sleep, noise, sugar, screen, "No", meal);
+        if (contrib === "Late screen exposure") return getPredictionKey(sleep, noise, sugar, "No", routine, meal);
+        if (contrib === "Late sugar intake") return getPredictionKey(sleep, noise, "No", screen, routine, meal);
+        if (contrib === "Late meal") return getPredictionKey(sleep, noise, sugar, screen, routine, "No");
+        return null;
+    };
+    const withImpact = contributors
+        .map((name) => {
+            const key = fixedKey(name);
+            const pred = key ? predictGrid[key] : null;
+            const drop = pred ? currentProb - pred.probability : 0;
+            return { name, impact: Math.max(0, drop) };
+        })
+        .filter((x) => x.impact >= 0)
+        .sort((a, b) => b.impact - a.impact);
+    return withImpact;
+}
+
+function drawContributorChart(contributorsWithImpact) {
     const ctx = document.getElementById("contributorChart");
     if (!ctx) return;
     if (contributorChartInstance) {
         contributorChartInstance.destroy();
         contributorChartInstance = null;
     }
+    const labels = contributorsWithImpact.map((c) => c.name);
+    const maxImpact = Math.max(...contributorsWithImpact.map((c) => c.impact), 1);
+    const barData = contributorsWithImpact.map((c) => Math.round((c.impact / maxImpact) * 100));
     contributorChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
-            labels: contributors,
+            labels,
             datasets: [{
-                label: "Model weight",
-                data: contributors.map((_, i) => 100 - i * 15),
+                label: "Risk drop if fixed",
+                data: barData,
                 backgroundColor: "rgba(124, 58, 237, 0.25)",
                 borderColor: "rgba(124, 58, 237, 0.6)",
                 borderWidth: 2,
@@ -402,8 +427,11 @@ function renderWhatIf(sleep, noise, sugar, screen, routine, meal, currentPred) {
                 }
                 if (contributorChartInstance) {
                     if (contrib.length) {
-                        contributorChartInstance.data.labels = contrib;
-                        contributorChartInstance.data.datasets[0].data = contrib.map((_, i) => 100 - i * 15);
+                        const withImpact = getContributorImpacts(contrib, s, n, sug, scr, r, m, pred.probability);
+                        const use = withImpact.length ? withImpact : contrib.map((n) => ({ name: n, impact: 0 }));
+                        const maxI = Math.max(...use.map((c) => c.impact), 1);
+                        contributorChartInstance.data.labels = use.map((c) => c.name);
+                        contributorChartInstance.data.datasets[0].data = use.map((c) => Math.round((c.impact / maxI) * 100));
                         contributorChartInstance.update();
                     } else {
                         contributorChartInstance.destroy();
@@ -445,7 +473,7 @@ predictBtn.addEventListener("click", async function () {
             const contribHtml = contributors.length ? `<br><br><strong>Risk factors today:</strong> ${contributors.join(", ")}` : "";
             const chartHtml = contributors.length ? `
                 <div class="contributor-chart-wrap">
-                    <div class="contributor-chart-label">Longer bar = stronger influence</div>
+                    <div class="contributor-chart-label">Bigger bar = bigger risk drop if you fix it</div>
                     <canvas id="contributorChart"></canvas>
                 </div>
             ` : "";
@@ -457,7 +485,10 @@ predictBtn.addEventListener("click", async function () {
                 ${chartHtml}
                 <div id="whatIfSection" class="what-if-section"></div>
             `;
-            if (contributors.length) drawContributorChart(contributors);
+            if (contributors.length) {
+                const withImpact = getContributorImpacts(contributors, sleep, noise, sugar, screen, routine, meal, pred.probability);
+                drawContributorChart(withImpact.length ? withImpact : contributors.map((n) => ({ name: n, impact: 0 })));
+            }
             renderWhatIf(sleep, noise, sugar, screen, routine, meal, pred);
         }
         predictionCard.style.display = "block";
