@@ -331,9 +331,6 @@ predictBtn.addEventListener("click", async function () {
                     <strong>Estimated meltdown likelihood: ${pred.probability}%</strong>
                     <br>Risk level: <strong>${pred.tier}</strong>${contribHtml}
                 </div>
-                <div class="disclaimer-box">
-                    <strong>Note:</strong> This is an estimate based on patterns in research. It does not predict behavior with certainty. Use it to plan, not to diagnose.
-                </div>
             `;
         }
         predictionCard.style.display = "block";

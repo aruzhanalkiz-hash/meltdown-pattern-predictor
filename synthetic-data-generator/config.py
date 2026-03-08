@@ -52,7 +52,8 @@ BASELINE = -1.65
 COEFFICIENTS = {
     # Per hour below SLEEP_RISK_THRESHOLD. Sleep explains 22-62% of
     # behavioral variance in ASD; treated as strongest predictor.
-    "sleep_below_threshold": -0.30,
+    # Positive = more deficit -> higher meltdown risk.
+    "sleep_below_threshold": 0.30,
     # Sensory environment. High noise linked to irritability and
     # meltdowns; 60-74% of ASD children have sensory sensitivities.
     "noise_medium": 0.25,
