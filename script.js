@@ -552,10 +552,7 @@ chatbotClose.addEventListener("click", () => {
 
 async function sendToOpenAI(userMsg) {
     const apiKey = typeof OPENAI_API_KEY !== "undefined" ? OPENAI_API_KEY : "";
-    if (!apiKey || apiKey === "your-openai-api-key-here") {
-        appendMessage("bot", "AI help isn't configured. Add your OpenAI API key in config.js to enable smart help.");
-        return;
-    }
+    const useProxy = !apiKey || apiKey === "your-openai-api-key-here";
 
     const ctx = getInsightsContext();
     const contextStr = ctx
@@ -565,37 +562,54 @@ async function sendToOpenAI(userMsg) {
     chatHistory.push({ role: "user", content: userMsg });
     const messages = [
         { role: "system", content: CHATBOT_SYSTEM_PROMPT + contextStr },
-        ...chatHistory.slice(-12).map((m) => ({ role: m.role, content: m.content })),
+        ...chatHistory.slice(-12).map((m) => ({ role: m.role === "assistant" ? "assistant" : m.role, content: m.content })),
     ];
 
     appendMessage("bot", "", true);
-    const typingEl = chatbotMessages.lastElementChild;
 
     try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages,
-                max_tokens: 500,
-                temperature: 0.7,
-            }),
-        });
+        let res;
+        if (useProxy) {
+            res = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages }),
+            });
+        } else {
+            res = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o-mini",
+                    messages,
+                    max_tokens: 500,
+                    temperature: 0.7,
+                }),
+            });
+        }
 
         removeTypingIndicator();
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            appendMessage("bot", "Sorry, I couldn't get a response. Please check your API key and try again.");
+            const msg = useProxy && res.status === 500
+                ? "AI help isn't configured. Add OPENAI_API_KEY in Vercel environment variables."
+                : "Sorry, I couldn't get a response. Please try again.";
+            appendMessage("bot", msg);
             return;
         }
 
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content?.trim() || "I'm not sure how to respond.";
+        let reply;
+        if (useProxy) {
+            const data = await res.json();
+            reply = data.reply || "I'm not sure how to respond.";
+        } else {
+            const data = await res.json();
+            reply = data.choices?.[0]?.message?.content?.trim() || "I'm not sure how to respond.";
+        }
         chatHistory.push({ role: "assistant", content: reply });
         appendMessage("bot", reply);
     } catch (err) {

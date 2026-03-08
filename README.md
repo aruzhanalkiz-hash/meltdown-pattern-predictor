@@ -36,14 +36,18 @@ Parents, guardians, and caregivers of children on the autism spectrum who want t
 
 ## Getting Started
 
+**Local:**
 1. Clone or download this repo
 2. **For AI help:** Add your OpenAI API key in `config.js`
-3. Open `index.html` in a web browser (or serve the folder with any static file server)
+3. Open `index.html` in a web browser
 4. Add daily logs—or click **Load Sample Data** to see how it works
-5. Click **Analyze Patterns** to view insights and top triggers
-6. Click the **Help** button (bottom-right) to ask the AI assistant anything
+5. Click **Analyze Patterns** to view insights
+6. Click the **Help** button (bottom-right) for AI assistance
 
-No installation or sign-up required.
+**Deploy on Vercel:**
+1. Push to GitHub and import the repo in Vercel
+2. Add **OPENAI_API_KEY** in Project Settings → Environment Variables
+3. Deploy — the AI chatbot will use the serverless API and your env var
 
 ---
 
