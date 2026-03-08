@@ -38,13 +38,13 @@ Run `python benchmark.py` to compare models with 5-fold cross-validation. Uses t
 
    ```bash
    cd ../synthetic-data-generator
-   python generate.py --count 20000 --output synthetic_logs.json
+   python3 generate.py --count 10000 --output synthetic_logs.json
    ```
 
 2. Install dependencies:
 
    ```bash
-   pip install -r requirements.txt
+   pip3 install -r requirements.txt
    ```
 
 ## Export Prediction Grid
@@ -52,23 +52,25 @@ Run `python benchmark.py` to compare models with 5-fold cross-validation. Uses t
 After training, export a lookup grid for the frontend (no server needed):
 
 ```bash
-python export_grid.py
+python3 export_grid.py
 ```
 
-This creates `predict_grid.json` in the project root. Commit it so the deployed app can load it.
+This creates `predict_grid.json` in the project root. Each entry includes `probability`, `tier` (Low/Medium/High), and `contributors` (risk factors ranked by feature importance). Commit it so the deployed app can load it.
+
+**Grid format:** Keys are `sleep|noise|sugar|screen|routine|meal` (e.g. `6.0|Medium|Yes|No|Yes|No`). Sleep values are 4.0 to 12.0 in 0.5 steps.
 
 ## Usage
 
 From the `model-training` directory:
 
 ```bash
-python train.py
+python3 train.py
 ```
 
 Or with explicit paths:
 
 ```bash
-python train.py --data ../synthetic-data-generator/synthetic_logs.json --output model.pkl --metrics metrics.json
+python3 train.py --data ../synthetic-data-generator/synthetic_logs.json --output model.pkl --metrics metrics.json
 ```
 
 ## Output

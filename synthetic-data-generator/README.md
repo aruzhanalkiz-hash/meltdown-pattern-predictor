@@ -80,7 +80,7 @@ The baseline is chosen so the overall meltdown rate over many generated logs fal
 
 Coefficients are research-informed estimates. No single paper provides odds ratios or regression coefficients for this exact set of predictors, so we set relative magnitudes from the literature:
 
-- Sleep: Strongest effect. Per hour below 7, we add a negative contribution to z (increased risk). Sleep explains the largest share of behavioral variance in the studies we reviewed.
+- Sleep: Strongest effect. Per hour below 7, we add a positive contribution to z (increased risk). Sleep explains the largest share of behavioral variance in the studies we reviewed.
 - Routine change: Strong effect. Routine disruption is a widely reported trigger.
 - Noise (High): Strong effect. Sensory load consistently associates with irritability.
 - Screen after 7: Moderate. Affects sleep and thus behavior.
@@ -108,7 +108,7 @@ After generating logs, you can:
 From the `synthetic-data-generator` directory:
 
 ```bash
-python generate.py --count 10000 --output synthetic_logs.json --seed 42
+python3 generate.py --count 10000 --output synthetic_logs.json --seed 42
 ```
 
 Options:
@@ -119,6 +119,13 @@ Options:
 - `--months`: Approximate date range in months (default: 12)
 
 The output JSON is an array of log objects. It can be used for model training or imported into the app for testing.
+
+**Full pipeline:** To train a new model and export the prediction grid for the app:
+
+```bash
+python3 generate.py --count 10000
+cd ../model-training && python3 train.py && python3 export_grid.py
+```
 
 ## References
 

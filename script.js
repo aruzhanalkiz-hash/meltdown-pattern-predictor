@@ -30,7 +30,6 @@ const logForm = document.getElementById("logForm");
 const logsTableBody = document.querySelector("#logsTable tbody");
 const emptyState = document.getElementById("emptyState");
 const insightsDiv = document.getElementById("insights");
-const sampleDataBtn = document.getElementById("sampleDataBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const clearBtn = document.getElementById("clearBtn");
 const predictBtn = document.getElementById("predictBtn");
@@ -39,7 +38,15 @@ const predictionResult = document.getElementById("predictionResult");
 
 function getLogs() {
     const logs = localStorage.getItem(STORAGE_KEY);
-    return logs ? JSON.parse(logs) : [];
+    const parsed = logs ? JSON.parse(logs) : [];
+    const needsMigration = parsed.some((l) => !l.id);
+    if (needsMigration) {
+        parsed.forEach((log, i) => {
+            if (!log.id) log.id = "legacy-" + i + "-" + Date.now();
+        });
+        saveLogs(parsed);
+    }
+    return parsed;
 }
 
 function saveLogs(logs) {
@@ -52,10 +59,12 @@ function renderLogs() {
 
     if (logs.length === 0) {
         emptyState.style.display = "block";
+        if (clearBtn) clearBtn.style.display = "none";
         return;
     }
 
     emptyState.style.display = "none";
+    if (clearBtn) clearBtn.style.display = "";
 
     const sortedLogs = [...logs].sort((a, b) => (b.date > a.date ? 1 : -1));
 
@@ -63,6 +72,7 @@ function renderLogs() {
         const row = document.createElement("tr");
         const meltdownClass = log.meltdownOccurred === "Yes" ? "meltdown-yes" : "meltdown-no";
         row.innerHTML = `
+      <td class="log-delete-cell"><button type="button" class="log-delete-btn" data-id="${log.id}" aria-label="Remove this log">×</button></td>
       <td>${log.date}</td>
       <td>${log.sleepHours}</td>
       <td>${log.noiseLevel}</td>
@@ -74,13 +84,33 @@ function renderLogs() {
     `;
         logsTableBody.appendChild(row);
     });
+    logsTableBody.querySelectorAll(".log-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => removeLog(btn.getAttribute("data-id")));
+    });
 }
 
 function addLog(log) {
     const logs = getLogs();
+    log.id = log.id || "log-" + Date.now();
     logs.push(log);
     saveLogs(logs);
     renderLogs();
+}
+
+function removeLog(id) {
+    const logs = getLogs().filter((l) => l.id !== id);
+    saveLogs(logs);
+    renderLogs();
+    if (triggerChartInstance) {
+        triggerChartInstance.destroy();
+        triggerChartInstance = null;
+    }
+    insightsDiv.innerHTML = `
+        <div class="card">
+            <h2>Trigger Visualization</h2>
+            <canvas id="triggerChart"></canvas>
+        </div>
+        <p class="insights-prompt">Click <strong>Analyze Patterns</strong> to see possible triggers.</p>`;
 }
 
 function meltdownRate(conditionFn) {
@@ -254,20 +284,6 @@ logForm.addEventListener("submit", function (event) {
 
     addLog(log);
     logForm.reset();
-});
-
-sampleDataBtn.addEventListener("click", function () {
-    saveLogs(getDefaultSampleLogs());
-    renderLogs();
-    if (triggerChartInstance) {
-        triggerChartInstance.destroy();
-        triggerChartInstance = null;
-    }
-    insightsDiv.innerHTML = `
-    <div class="insight-box">
-      Sample data loaded. Now click <strong>Analyze Patterns</strong>.
-    </div>
-  `;
 });
 
 analyzeBtn.addEventListener("click", analyzePatterns);

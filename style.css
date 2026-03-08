@@ -220,7 +220,7 @@ button[type="submit"]:hover {
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
 }
 
-/* Secondary — Load Sample, Analyze, Toggle */
+/* Secondary — Analyze, etc. */
 button.secondary {
     background: var(--color-purple-pastel);
     color: #5B21B6;
@@ -231,13 +231,13 @@ button.secondary:hover {
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
 }
 
-/* Secondary variant — Load Sample (more yellow) */
-#sampleDataBtn {
+/* Predict Risk — yellow accent */
+button.predict-btn {
     background: var(--color-yellow-soft);
     color: #854D0E;
 }
 
-#sampleDataBtn:hover {
+button.predict-btn:hover {
     background: var(--color-yellow-medium);
     box-shadow: 0 2px 8px rgba(234, 179, 8, 0.25);
 }
@@ -304,6 +304,48 @@ td.meltdown-yes {
 
 td.meltdown-no {
     color: var(--color-text-muted);
+}
+
+.saved-logs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.saved-logs-header h2 {
+    margin-bottom: 0;
+}
+
+button.compact {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.log-delete-cell {
+    width: 36px;
+    padding: 6px 8px !important;
+    vertical-align: middle;
+}
+
+.log-delete-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    line-height: 1;
+    background: transparent;
+    color: var(--color-text-muted);
+    border: 1px solid transparent;
+    transition: color 0.2s, background 0.2s;
+}
+
+.log-delete-btn:hover {
+    background: var(--color-pink-pastel);
+    color: #9D174D;
+    border-color: rgba(236, 72, 153, 0.3);
 }
 
 #emptyState {
