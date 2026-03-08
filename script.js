@@ -369,51 +369,38 @@ function drawContributorChart(contributorsWithImpact) {
     });
 }
 
+function getWhatIfKey(contrib, sleep, noise, sugar, screen, routine, meal) {
+    if (contrib === "Low sleep (<7h)") return getPredictionKey("8", noise, sugar, screen, routine, meal);
+    if (contrib === "High sensory environment" || contrib === "Medium sensory environment") return getPredictionKey(sleep, "Low", sugar, screen, routine, meal);
+    if (contrib === "Routine change") return getPredictionKey(sleep, noise, sugar, screen, "No", meal);
+    if (contrib === "Late screen exposure") return getPredictionKey(sleep, noise, sugar, "No", routine, meal);
+    if (contrib === "Late sugar intake") return getPredictionKey(sleep, noise, "No", screen, routine, meal);
+    if (contrib === "Late meal") return getPredictionKey(sleep, noise, sugar, screen, routine, "No");
+    return null;
+}
+
+function getWhatIfLabel(contrib) {
+    if (contrib === "Low sleep (<7h)") return "Sleep 8h";
+    if (contrib === "High sensory environment" || contrib === "Medium sensory environment") return "Low sensory";
+    if (contrib === "Routine change") return "No routine change";
+    if (contrib === "Late screen exposure") return "No late screen";
+    if (contrib === "Late sugar intake") return "No late sugar";
+    if (contrib === "Late meal") return "No late meal";
+    return null;
+}
+
 function renderWhatIf(sleep, noise, sugar, screen, routine, meal, currentPred) {
     const wrap = document.getElementById("whatIfSection");
     if (!wrap) return;
-    const sleepNum = parseFloat(sleep) || 7;
+    const contributors = (currentPred.contributors && currentPred.contributors.length) ? currentPred.contributors : getTopContributors(sleep, noise, sugar, screen, routine, meal);
+    const withImpact = getContributorImpacts(contributors, sleep, noise, sugar, screen, routine, meal, currentPred.probability);
     const suggestions = [];
-    if (sleepNum < 7) {
-        const key8 = getPredictionKey("8", noise, sugar, screen, routine, meal);
-        const pred8 = predictGrid[key8];
-        if (pred8 && pred8.probability < currentPred.probability) {
-            suggestions.push({ label: "Sleep 8h", key: key8, pred: pred8 });
-        }
-    }
-    if (noise !== "Low") {
-        const keyLow = getPredictionKey(sleep, "Low", sugar, screen, routine, meal);
-        const predLow = predictGrid[keyLow];
-        if (predLow && predLow.probability < currentPred.probability) {
-            suggestions.push({ label: "Low sensory", key: keyLow, pred: predLow });
-        }
-    }
-    if (routine === "Yes") {
-        const keyRoutine = getPredictionKey(sleep, noise, sugar, screen, "No", meal);
-        const predRoutine = predictGrid[keyRoutine];
-        if (predRoutine && predRoutine.probability < currentPred.probability) {
-            suggestions.push({ label: "No routine change", key: keyRoutine, pred: predRoutine });
-        }
-    }
-    if (sugar === "Yes") {
-        const keySugar = getPredictionKey(sleep, noise, "No", screen, routine, meal);
-        const predSugar = predictGrid[keySugar];
-        if (predSugar && predSugar.probability < currentPred.probability) {
-            suggestions.push({ label: "No late sugar", key: keySugar, pred: predSugar });
-        }
-    }
-    if (screen === "Yes") {
-        const keyScreen = getPredictionKey(sleep, noise, sugar, "No", routine, meal);
-        const predScreen = predictGrid[keyScreen];
-        if (predScreen && predScreen.probability < currentPred.probability) {
-            suggestions.push({ label: "No late screen", key: keyScreen, pred: predScreen });
-        }
-    }
-    if (meal === "Yes") {
-        const keyMeal = getPredictionKey(sleep, noise, sugar, screen, routine, "No");
-        const predMeal = predictGrid[keyMeal];
-        if (predMeal && predMeal.probability < currentPred.probability) {
-            suggestions.push({ label: "No late meal", key: keyMeal, pred: predMeal });
+    for (const { name, impact } of withImpact) {
+        const key = getWhatIfKey(name, sleep, noise, sugar, screen, routine, meal);
+        const label = getWhatIfLabel(name);
+        if (key && label) {
+            const pred = predictGrid[key];
+            if (pred) suggestions.push({ label, key, pred });
         }
     }
     if (suggestions.length === 0) {
