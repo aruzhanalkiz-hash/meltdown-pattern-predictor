@@ -6,15 +6,15 @@ This folder trains a machine learning model to predict meltdown likelihood from 
 
 We use Logistic Regression because it won a fair benchmark (see `benchmark.py`).
 
-**Benchmark results (5-fold CV on 10k synthetic logs):**
+**Benchmark results (5-fold CV on 20k synthetic logs):**
 
 | Model | Accuracy | AUC-ROC | Brier |
 |-------|----------|---------|-------|
-| Logistic Regression | 64.2% | 0.676 | 0.226 |
-| Random Forest | 63.2% | 0.653 | 0.230 |
-| Random Forest (deeper) | 62.7% | 0.646 | 0.233 |
+| Logistic Regression | 64.0% | 0.676 | 0.225 |
+| Random Forest | 63.5% | 0.659 | 0.228 |
+| Random Forest (deeper) | 63.3% | 0.653 | 0.230 |
 
-Logistic Regression has the best AUC and calibration. This makes sense: the synthetic data is generated with a logistic-style formula, so the model matches the data structure.
+Logistic Regression has the best AUC and calibration. The pipeline adds `sleep_below_7` and `sleep_x_noise_high` to align with the generator's structure.
 
 **Caveat:** On real caregiver data, the true relationship may be non-linear or include interactions we did not model. If you later get real logs and retrain, run `benchmark.py` again to compare models on that data. Logistic Regression may or may not remain best.
 
@@ -22,9 +22,11 @@ Logistic Regression has the best AUC and calibration. This makes sense: the synt
 
 The saved artifact is a sklearn Pipeline with two steps:
 
-1. **Preprocessing.** Converts raw inputs (sleep hours, noise level, Yes/No fields) into a numeric matrix. Binary fields become 0/1. Noise level is one-hot encoded (Low, Medium, High).
+1. **Preprocessing.** Converts raw inputs into a numeric matrix: binary Yes/No to 0/1, noise one-hot encoded. Adds `sleep_below_7` and `sleep_x_noise_high` (interaction) to match the synthetic generator.
 
-2. **Logistic Regression.** Max iter 1000, class weight balanced.
+2. **StandardScaler.** Normalizes features for comparable coefficients.
+
+3. **Logistic Regression.** Max iter 1000, C=2.0, class weight balanced.
 
 The pipeline is saved with pickle so the inference API can load it and call `predict_proba` with the same input format.
 
@@ -38,7 +40,7 @@ Run `python benchmark.py` to compare models with 5-fold cross-validation. Uses t
 
    ```bash
    cd ../synthetic-data-generator
-   python generate.py --count 10000 --output synthetic_logs.json
+   python generate.py --count 20000 --output synthetic_logs.json
    ```
 
 2. Install dependencies:

@@ -52,7 +52,7 @@ def build_logistic() -> Pipeline:
         ("preprocess", _Preprocessor()),
         ("scale", StandardScaler()),
         ("classifier", LogisticRegression(
-            max_iter=1000, class_weight="balanced", random_state=RANDOM_STATE,
+            max_iter=1000, C=2.0, class_weight="balanced", random_state=RANDOM_STATE,
         )),
     ])
 

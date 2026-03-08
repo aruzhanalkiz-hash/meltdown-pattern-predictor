@@ -74,4 +74,5 @@ COEFFICIENTS = {
 INTERACTION_SLEEP_SENSORY = 0.20
 
 # Random noise on log-odds. Real outcomes have unmeasured factors.
-LOG_ODDS_NOISE_STD = 0.4
+# 0.35 balances signal with realism (0.4 was noisier, 0.3 more predictable).
+LOG_ODDS_NOISE_STD = 0.35

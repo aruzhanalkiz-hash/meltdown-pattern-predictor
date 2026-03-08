@@ -75,6 +75,7 @@ def build_pipeline() -> Pipeline:
                 "classifier",
                 LogisticRegression(
                     max_iter=1000,
+                    C=2.0,
                     class_weight="balanced",
                     random_state=RANDOM_STATE,
                 ),
@@ -83,10 +84,14 @@ def build_pipeline() -> Pipeline:
     )
 
 
+SLEEP_RISK_THRESHOLD = 7.0
+
+
 class _Preprocessor(BaseEstimator, TransformerMixin):
     """
-    Convert raw feature values to numeric matrix for Random Forest.
-    Encodes binary Yes/No as 0/1 and one-hot encodes noise level.
+    Convert raw feature values to numeric matrix.
+    Adds sleep_below_7 and sleep_x_noise_high interaction to match
+    the synthetic data generator's structure.
     """
 
     def fit(self, X, y=None):
@@ -108,7 +113,14 @@ class _Preprocessor(BaseEstimator, TransformerMixin):
             noise_medium = 1 if noise == "Medium" else 0
             noise_high = 1 if noise == "High" else 0
 
-            rows.append([sleep, sugar, screen, routine, meal, noise_low, noise_medium, noise_high])
+            sleep_below_7 = 1 if sleep < SLEEP_RISK_THRESHOLD else 0
+            sleep_x_noise_high = 1 if (sleep < SLEEP_RISK_THRESHOLD and noise_high == 1) else 0
+
+            rows.append([
+                sleep, sugar, screen, routine, meal,
+                noise_low, noise_medium, noise_high,
+                sleep_below_7, sleep_x_noise_high,
+            ])
 
         return np.array(rows, dtype=np.float64)
 
@@ -122,6 +134,8 @@ class _Preprocessor(BaseEstimator, TransformerMixin):
             "noise_Low",
             "noise_Medium",
             "noise_High",
+            "sleep_below_7",
+            "sleep_x_noise_high",
         ]
 
 
