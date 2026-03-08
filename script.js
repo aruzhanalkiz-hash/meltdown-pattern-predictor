@@ -333,7 +333,9 @@ function drawContributorChart(contributorsWithImpact) {
     }
     const labels = contributorsWithImpact.map((c) => c.name);
     const maxImpact = Math.max(...contributorsWithImpact.map((c) => c.impact), 1);
-    const barData = contributorsWithImpact.map((c) => Math.round((c.impact / maxImpact) * 100));
+    const barData = contributorsWithImpact.map((c) =>
+        c.impact > 0 ? Math.round((c.impact / maxImpact) * 100) : 8
+    );
     contributorChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
@@ -391,6 +393,13 @@ function renderWhatIf(sleep, noise, sugar, screen, routine, meal, currentPred) {
         const predRoutine = predictGrid[keyRoutine];
         if (predRoutine && predRoutine.probability < currentPred.probability) {
             suggestions.push({ label: "No routine change", key: keyRoutine, pred: predRoutine });
+        }
+    }
+    if (sugar === "Yes") {
+        const keySugar = getPredictionKey(sleep, noise, "No", screen, routine, meal);
+        const predSugar = predictGrid[keySugar];
+        if (predSugar && predSugar.probability < currentPred.probability) {
+            suggestions.push({ label: "No late sugar", key: keySugar, pred: predSugar });
         }
     }
     if (suggestions.length === 0) {
