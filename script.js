@@ -334,7 +334,7 @@ function drawContributorChart(contributorsWithImpact) {
     const labels = contributorsWithImpact.map((c) => c.name);
     const maxImpact = Math.max(...contributorsWithImpact.map((c) => c.impact), 1);
     const barData = contributorsWithImpact.map((c) =>
-        c.impact > 0 ? Math.round((c.impact / maxImpact) * 100) : 8
+        c.impact > 0 ? Math.round((c.impact / maxImpact) * 100) : 15
     );
     contributorChartInstance = new Chart(ctx, {
         type: "bar",
@@ -400,6 +400,20 @@ function renderWhatIf(sleep, noise, sugar, screen, routine, meal, currentPred) {
         const predSugar = predictGrid[keySugar];
         if (predSugar && predSugar.probability < currentPred.probability) {
             suggestions.push({ label: "No late sugar", key: keySugar, pred: predSugar });
+        }
+    }
+    if (screen === "Yes") {
+        const keyScreen = getPredictionKey(sleep, noise, sugar, "No", routine, meal);
+        const predScreen = predictGrid[keyScreen];
+        if (predScreen && predScreen.probability < currentPred.probability) {
+            suggestions.push({ label: "No late screen", key: keyScreen, pred: predScreen });
+        }
+    }
+    if (meal === "Yes") {
+        const keyMeal = getPredictionKey(sleep, noise, sugar, screen, routine, "No");
+        const predMeal = predictGrid[keyMeal];
+        if (predMeal && predMeal.probability < currentPred.probability) {
+            suggestions.push({ label: "No late meal", key: keyMeal, pred: predMeal });
         }
     }
     if (suggestions.length === 0) {
@@ -482,7 +496,7 @@ predictBtn.addEventListener("click", async function () {
             const contribHtml = contributors.length ? `<br><br><strong>Risk factors today:</strong> ${contributors.join(", ")}` : "";
             const chartHtml = contributors.length ? `
                 <div class="contributor-chart-wrap">
-                    <div class="contributor-chart-label">Bigger bar = bigger risk drop if you fix it</div>
+                    <div class="contributor-chart-label">Bigger bar = bigger drop. Small bar = minimal effect.</div>
                     <canvas id="contributorChart"></canvas>
                 </div>
             ` : "";
