@@ -1,12 +1,43 @@
 const STORAGE_KEY = "meltdownLogs";
 
+function getDefaultSampleLogs() {
+    return [
+        { date: "2026-01-15", sleepHours: 8, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-16", sleepHours: 6, noiseLevel: "High", sugarAfter6: "Yes", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-01-17", sleepHours: 7.5, noiseLevel: "Medium", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-18", sleepHours: 5.5, noiseLevel: "High", sugarAfter6: "Yes", screenAfter7: "Yes", routineChange: "No", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-01-20", sleepHours: 8.5, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-21", sleepHours: 6.5, noiseLevel: "Medium", sugarAfter6: "No", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "No", meltdownOccurred: "Yes" },
+        { date: "2026-01-22", sleepHours: 7, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-23", sleepHours: 5, noiseLevel: "High", sugarAfter6: "Yes", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-01-25", sleepHours: 8, noiseLevel: "Medium", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-26", sleepHours: 7, noiseLevel: "High", sugarAfter6: "No", screenAfter7: "Yes", routineChange: "No", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-01-27", sleepHours: 9, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-28", sleepHours: 6, noiseLevel: "Medium", sugarAfter6: "Yes", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-01-30", sleepHours: 7.5, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-01-31", sleepHours: 6.5, noiseLevel: "High", sugarAfter6: "No", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "No", meltdownOccurred: "Yes" },
+        { date: "2026-02-02", sleepHours: 8, noiseLevel: "Medium", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-02-03", sleepHours: 4.5, noiseLevel: "High", sugarAfter6: "Yes", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-02-04", sleepHours: 7, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-02-06", sleepHours: 6, noiseLevel: "High", sugarAfter6: "Yes", screenAfter7: "Yes", routineChange: "No", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+        { date: "2026-02-07", sleepHours: 8.5, noiseLevel: "Low", sugarAfter6: "No", screenAfter7: "No", routineChange: "No", mealAfter7: "No", meltdownOccurred: "No" },
+        { date: "2026-02-08", sleepHours: 7, noiseLevel: "Medium", sugarAfter6: "No", screenAfter7: "Yes", routineChange: "Yes", mealAfter7: "Yes", meltdownOccurred: "No" },
+        { date: "2026-02-10", sleepHours: 6.5, noiseLevel: "High", sugarAfter6: "No", screenAfter7: "Yes", routineChange: "No", mealAfter7: "Yes", meltdownOccurred: "Yes" },
+    ];
+}
+
+const LOGS_VISIBLE_COUNT = 6;
+
 const logForm = document.getElementById("logForm");
 const logsTableBody = document.querySelector("#logsTable tbody");
 const emptyState = document.getElementById("emptyState");
+const toggleLogsBtn = document.getElementById("toggleLogsBtn");
 const insightsDiv = document.getElementById("insights");
 const sampleDataBtn = document.getElementById("sampleDataBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const clearBtn = document.getElementById("clearBtn");
+
+let logsExpanded = false;
 
 function getLogs() {
     const logs = localStorage.getItem(STORAGE_KEY);
@@ -23,12 +54,18 @@ function renderLogs() {
 
     if (logs.length === 0) {
         emptyState.style.display = "block";
+        toggleLogsBtn.style.display = "none";
         return;
     }
 
     emptyState.style.display = "none";
 
-    logs.forEach((log) => {
+    const sortedLogs = [...logs].sort((a, b) => (b.date > a.date ? 1 : -1));
+    const toShow = logsExpanded || logs.length <= LOGS_VISIBLE_COUNT
+        ? sortedLogs
+        : sortedLogs.slice(0, LOGS_VISIBLE_COUNT);
+
+    toShow.forEach((log) => {
         const row = document.createElement("tr");
         row.innerHTML = `
       <td>${log.date}</td>
@@ -42,6 +79,15 @@ function renderLogs() {
     `;
         logsTableBody.appendChild(row);
     });
+
+    if (logs.length > LOGS_VISIBLE_COUNT) {
+        toggleLogsBtn.style.display = "inline-block";
+        toggleLogsBtn.textContent = logsExpanded
+            ? `Show less (${LOGS_VISIBLE_COUNT})`
+            : `View all (${logs.length})`;
+    } else {
+        toggleLogsBtn.style.display = "none";
+    }
 }
 
 function addLog(log) {
@@ -74,6 +120,10 @@ function analyzePatterns() {
     const logs = getLogs();
 
     if (logs.length < 3) {
+        if (triggerChartInstance) {
+            triggerChartInstance.destroy();
+            triggerChartInstance = null;
+        }
         insightsDiv.innerHTML = `
       <div class="warning-box">
         Please add at least 3 logs so the analysis makes sense.
@@ -82,44 +132,50 @@ function analyzePatterns() {
         return;
     }
 
-    const patterns = [
+    const patternDefs = [
         {
             name: "Sleep below 7 hours",
-            data: meltdownRate((log) => Number(log.sleepHours) < 7),
+            whenPresent: (log) => Number(log.sleepHours) < 7,
             explanation:
                 "Lower sleep may increase stress, irritability, or sensitivity to sensory input.",
         },
         {
             name: "High sensory environment",
-            data: meltdownRate((log) => log.noiseLevel === "High"),
+            whenPresent: (log) => log.noiseLevel === "High",
             explanation:
                 "Loud environments may contribute to sensory overload and emotional distress.",
         },
         {
             name: "Late sugar intake",
-            data: meltdownRate((log) => log.sugarAfter6 === "Yes"),
+            whenPresent: (log) => log.sugarAfter6 === "Yes",
             explanation:
                 "Late sugar intake may be linked to energy spikes and difficulty regulating emotions.",
         },
         {
             name: "Late screen exposure",
-            data: meltdownRate((log) => log.screenAfter7 === "Yes"),
+            whenPresent: (log) => log.screenAfter7 === "Yes",
             explanation:
                 "Late screen exposure may interfere with sleep preparation and emotional regulation.",
         },
         {
             name: "Routine change",
-            data: meltdownRate((log) => log.routineChange === "Yes"),
+            whenPresent: (log) => log.routineChange === "Yes",
             explanation:
                 "Unexpected routine changes may increase anxiety and difficulty with transitions.",
         },
         {
             name: "Late meal",
-            data: meltdownRate((log) => log.mealAfter7 === "Yes"),
+            whenPresent: (log) => log.mealAfter7 === "Yes",
             explanation:
                 "Late meals may be connected to discomfort, disrupted routine, or sleep issues.",
         },
     ];
+
+    const patterns = patternDefs.map((def) => ({
+        ...def,
+        whenPresentData: meltdownRate(def.whenPresent),
+        whenAbsentData: meltdownRate((log) => !def.whenPresent(log)),
+    }));
 
     let html = "";
 
@@ -133,32 +189,46 @@ function analyzePatterns() {
   `;
 
     patterns.forEach((pattern) => {
-        if (!pattern.data) return;
+        const present = pattern.whenPresentData;
+        const absent = pattern.whenAbsentData;
+        if (!present && !absent) return;
+
+        const presentStr = present
+            ? `${present.rate.toFixed(1)}% when present (${present.meltdowns}/${present.total})`
+            : "no data when present";
+        const absentStr = absent
+            ? `${absent.rate.toFixed(1)}% when absent (${absent.meltdowns}/${absent.total})`
+            : "no data when absent";
 
         html += `
       <div class="insight-box">
         <strong>${pattern.name}</strong><br>
-        Meltdown rate under this condition:
-        <strong>${pattern.data.rate.toFixed(1)}%</strong>
-        (${pattern.data.meltdowns} out of ${pattern.data.total} logs)<br><br>
+        Meltdown rate: <strong>${presentStr}</strong><br>
+        vs ${absentStr}<br><br>
         <em>${pattern.explanation}</em>
       </div>
     `;
     });
 
     const strongTriggers = patterns
-        .filter((pattern) => pattern.data && pattern.data.total >= 1)
-        .sort((a, b) => b.data.rate - a.data.rate)
+        .filter((p) => p.whenPresentData && p.whenPresentData.total >= 1)
+        .map((p) => ({
+            ...p,
+            lift:
+                p.whenPresentData.rate -
+                (p.whenAbsentData ? p.whenAbsentData.rate : 0),
+        }))
+        .sort((a, b) => b.lift - a.lift)
         .slice(0, 3);
 
     if (strongTriggers.length > 0) {
         html += `
       <div class="warning-box">
-        <strong>Top possible triggers:</strong><br>
+        <strong>Top possible triggers (biggest difference vs. baseline):</strong><br>
         ${strongTriggers
                 .map(
                     (trigger, index) =>
-                        `${index + 1}. ${trigger.name} (${trigger.data.rate.toFixed(1)}% meltdown rate)`
+                        `${index + 1}. ${trigger.name} (+${trigger.lift.toFixed(0)}% when present vs absent)`
                 )
                 .join("<br>")}
       </div>
@@ -172,7 +242,14 @@ function analyzePatterns() {
     </div>
   `;
 
-    insightsDiv.innerHTML = html;
+    const chartCard = `
+    <div class="card">
+      <h2>Trigger Visualization</h2>
+      <canvas id="triggerChart"></canvas>
+    </div>
+  `;
+    insightsDiv.innerHTML = chartCard + html;
+    drawTriggerChart(patterns);
 }
 
 logForm.addEventListener("submit", function (event) {
@@ -194,61 +271,13 @@ logForm.addEventListener("submit", function (event) {
 });
 
 sampleDataBtn.addEventListener("click", function () {
-    const sampleLogs = [
-        {
-            date: "2026-03-01",
-            sleepHours: 8,
-            noiseLevel: "Low",
-            sugarAfter6: "No",
-            screenAfter7: "No",
-            routineChange: "No",
-            mealAfter7: "No",
-            meltdownOccurred: "No",
-        },
-        {
-            date: "2026-03-02",
-            sleepHours: 6,
-            noiseLevel: "High",
-            sugarAfter6: "Yes",
-            screenAfter7: "Yes",
-            routineChange: "Yes",
-            mealAfter7: "Yes",
-            meltdownOccurred: "Yes",
-        },
-        {
-            date: "2026-03-03",
-            sleepHours: 6.5,
-            noiseLevel: "High",
-            sugarAfter6: "No",
-            screenAfter7: "Yes",
-            routineChange: "No",
-            mealAfter7: "Yes",
-            meltdownOccurred: "Yes",
-        },
-        {
-            date: "2026-03-04",
-            sleepHours: 7.5,
-            noiseLevel: "Medium",
-            sugarAfter6: "No",
-            screenAfter7: "No",
-            routineChange: "No",
-            mealAfter7: "No",
-            meltdownOccurred: "No",
-        },
-        {
-            date: "2026-03-05",
-            sleepHours: 5.5,
-            noiseLevel: "High",
-            sugarAfter6: "Yes",
-            screenAfter7: "Yes",
-            routineChange: "Yes",
-            mealAfter7: "Yes",
-            meltdownOccurred: "Yes",
-        },
-    ];
-
-    saveLogs(sampleLogs);
+    saveLogs(getDefaultSampleLogs());
+    logsExpanded = false;
     renderLogs();
+    if (triggerChartInstance) {
+        triggerChartInstance.destroy();
+        triggerChartInstance = null;
+    }
     insightsDiv.innerHTML = `
     <div class="insight-box">
       Sample data loaded. Now click <strong>Analyze Patterns</strong>.
@@ -258,47 +287,81 @@ sampleDataBtn.addEventListener("click", function () {
 
 analyzeBtn.addEventListener("click", analyzePatterns);
 
-clearBtn.addEventListener("click", function () {
-    localStorage.removeItem(STORAGE_KEY);
+toggleLogsBtn.addEventListener("click", function () {
+    logsExpanded = !logsExpanded;
     renderLogs();
-    insightsDiv.innerHTML = `Click <strong>Analyze Patterns</strong> to see possible triggers.`;
 });
 
-renderLogs();
+clearBtn.addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    logsExpanded = false;
+    renderLogs();
+    if (triggerChartInstance) {
+        triggerChartInstance.destroy();
+        triggerChartInstance = null;
+    }
+    insightsDiv.innerHTML = `
+    <div class="card">
+      <h2>Trigger Visualization</h2>
+      <canvas id="triggerChart"></canvas>
+    </div>
+    Click <strong>Analyze Patterns</strong> to see possible triggers.`;
+});
+
+let triggerChartInstance = null;
+
 function drawTriggerChart(patterns) {
-
-    const ctx = document.getElementById('triggerChart');
-
+    const ctx = document.getElementById("triggerChart");
     if (!ctx) return;
 
-    const labels = patterns.map(p => p.name);
-    const values = patterns.map(p => p.rate);
+    const withData = patterns.filter(
+        (p) => p.whenPresentData || p.whenAbsentData
+    );
+    if (withData.length === 0) return;
 
-    new Chart(ctx, {
-        type: 'bar',
+    if (triggerChartInstance) {
+        triggerChartInstance.destroy();
+        triggerChartInstance = null;
+    }
+
+    const labels = withData.map((p) => p.name);
+    const whenPresentValues = withData.map((p) =>
+        p.whenPresentData ? p.whenPresentData.rate : null
+    );
+    const whenAbsentValues = withData.map((p) =>
+        p.whenAbsentData ? p.whenAbsentData.rate : null
+    );
+
+    triggerChartInstance = new Chart(ctx, {
+        type: "bar",
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Meltdown Rate (%)',
-                data: values,
-                backgroundColor: [
-                    '#ff6384',
-                    '#36a2eb',
-                    '#ffcd56',
-                    '#4bc0c0',
-                    '#9966ff',
-                    '#ff9f40'
-                ]
-            }]
+            datasets: [
+                {
+                    label: "When condition present",
+                    data: whenPresentValues,
+                    backgroundColor: "rgba(220, 38, 38, 0.7)",
+                },
+                {
+                    label: "When condition absent",
+                    data: whenAbsentValues,
+                    backgroundColor: "rgba(34, 197, 94, 0.7)",
+                },
+            ],
         },
         options: {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
+                    max: 100,
+                    title: { display: true, text: "Meltdown rate (%)" },
+                },
+            },
+        },
     });
-
 }
+
+if (getLogs().length === 0) {
+    saveLogs(getDefaultSampleLogs());
+}
+renderLogs();

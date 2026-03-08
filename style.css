@@ -86,6 +86,8 @@ button:hover {
 
 .table-wrapper {
     overflow-x: auto;
+    max-height: 320px;
+    overflow-y: auto;
 }
 
 table {
