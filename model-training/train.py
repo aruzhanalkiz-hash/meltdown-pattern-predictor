@@ -2,7 +2,7 @@
 """
 Train meltdown prediction model on synthetic logs.
 
-Uses Logistic Regression (benchmark winner on synthetic data). Run
+Uses XGBoost (benchmark winner: 68.5% accuracy, best Brier). Run
 benchmark.py to compare models. Saves a predictor pipeline for inference.
 
 Usage:
@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -26,7 +26,6 @@ from sklearn.metrics import (
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 FEATURE_COLUMNS = [
     "sleepHours",
@@ -66,17 +65,16 @@ def load_data(path: Path) -> Tuple[List[dict], np.ndarray]:
 
 
 def build_pipeline() -> Pipeline:
-    """Build preprocessing + Logistic Regression pipeline."""
+    """Build preprocessing + XGBoost pipeline."""
     return Pipeline(
         steps=[
             ("preprocess", _Preprocessor()),
-            ("scale", StandardScaler()),
             (
                 "classifier",
-                LogisticRegression(
-                    max_iter=1000,
-                    C=2.0,
-                    class_weight="balanced",
+                XGBClassifier(
+                    n_estimators=200,
+                    max_depth=6,
+                    learning_rate=0.1,
                     random_state=RANDOM_STATE,
                 ),
             ),
@@ -194,12 +192,10 @@ def main():
         "n_test": int(len(X_test)),
     }
 
-    # Feature importance (scaled coefficients for Logistic Regression)
+    # Feature importance (XGBoost)
     clf = pipeline.named_steps["classifier"]
-    scaler = pipeline.named_steps["scale"]
     feature_names = pipeline.named_steps["preprocess"].get_feature_names_out()
-    coef_scaled = clf.coef_[0] * scaler.scale_
-    importances = dict(zip(feature_names, map(float, np.abs(coef_scaled))))
+    importances = dict(zip(feature_names, map(float, clf.feature_importances_)))
     metrics["feature_importance"] = importances
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

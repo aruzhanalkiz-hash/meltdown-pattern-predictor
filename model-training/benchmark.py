@@ -57,23 +57,20 @@ def build_logistic() -> Pipeline:
     ])
 
 
-def try_xgboost():
-    """Try XGBoost if available."""
+def build_xgboost():
     try:
         from xgboost import XGBClassifier
-
-        def build_xgb() -> Pipeline:
-            return Pipeline([
-                ("preprocess", _Preprocessor()),
-                ("classifier", XGBClassifier(
-                    n_estimators=200, max_depth=6, learning_rate=0.1,
-                    use_label_encoder=False, eval_metric="logloss",
-                    random_state=RANDOM_STATE,
-                )),
-            ])
-        return build_xgb
-    except ImportError:
-        return None
+        return Pipeline([
+            ("preprocess", _Preprocessor()),
+            ("classifier", XGBClassifier(
+                n_estimators=200,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=RANDOM_STATE,
+            )),
+        ])
+    except Exception:
+        return None  # ImportError or XGBoostError (e.g. libomp missing on Mac)
 
 
 def run_benchmark():
@@ -86,14 +83,13 @@ def run_benchmark():
     X_raw, y = load_data(DATA_PATH)
 
     models = {
+        "LogisticRegression": build_logistic(),
         "RandomForest (current)": build_rf_default(),
         "RandomForest (deeper)": build_rf_deeper(),
-        "LogisticRegression": build_logistic(),
     }
-
-    xgb_builder = try_xgboost()
-    if xgb_builder:
-        models["XGBoost"] = xgb_builder()
+    xgb = build_xgboost()
+    if xgb:
+        models["XGBoost"] = xgb
 
     results = []
 
@@ -129,13 +125,15 @@ def run_benchmark():
     best = max(results, key=lambda r: r["auc_mean"])
     print(f"\nBest by AUC: {best['model']} (AUC {best['auc_mean']:.3f})")
 
-    # Honest note: is the improvement meaningful?
-    rf_current = next(r for r in results if r["model"] == "RandomForest (current)")
-    auc_gain = best["auc_mean"] - rf_current["auc_mean"]
-    if auc_gain > 0.02:  # 2% AUC gain is meaningful
-        print(f"  -> {best['model']} beats RF by {auc_gain:.3f} AUC. Consider switching.")
+    # Compare best to LogReg baseline
+    logreg = next(r for r in results if r["model"] == "LogisticRegression")
+    auc_gain = best["auc_mean"] - logreg["auc_mean"]
+    if best["model"] == "LogisticRegression":
+        print(f"  -> LogReg remains best.")
+    elif auc_gain > 0.02:
+        print(f"  -> {best['model']} beats LogReg by {auc_gain:.3f} AUC. Consider switching.")
     else:
-        print(f"  -> Improvement over RF ({auc_gain:+.3f}) is marginal. RF remains acceptable.")
+        print(f"  -> {best['model']} vs LogReg: {auc_gain:+.3f} AUC. Margin small.")
 
     return results
 
