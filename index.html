@@ -88,6 +88,7 @@
 
                 <div class="button-row">
                     <button type="submit">Save Log</button>
+                    <button type="button" id="predictBtn" class="secondary">Predict Risk</button>
                     <button type="button" id="sampleDataBtn" class="secondary">Load Sample Data</button>
                     <button type="button" id="analyzeBtn" class="secondary">Analyze Patterns</button>
                     <button type="button" id="clearBtn" class="danger">Clear All Data</button>
@@ -115,6 +116,11 @@
                     <tbody></tbody>
                 </table>
             </div>
+        </div>
+
+        <div class="card" id="predictionCard" style="display: none;">
+            <h2>Risk Prediction</h2>
+            <div id="predictionResult"></div>
         </div>
 
         <div class="card">

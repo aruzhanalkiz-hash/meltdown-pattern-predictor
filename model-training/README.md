@@ -47,6 +47,16 @@ Run `python benchmark.py` to compare models with 5-fold cross-validation. Uses t
    pip install -r requirements.txt
    ```
 
+## Export Prediction Grid
+
+After training, export a lookup grid for the frontend (no server needed):
+
+```bash
+python export_grid.py
+```
+
+This creates `predict_grid.json` in the project root. Commit it so the deployed app can load it.
+
 ## Usage
 
 From the `model-training` directory:

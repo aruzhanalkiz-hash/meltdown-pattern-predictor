@@ -33,6 +33,9 @@ const insightsDiv = document.getElementById("insights");
 const sampleDataBtn = document.getElementById("sampleDataBtn");
 const analyzeBtn = document.getElementById("analyzeBtn");
 const clearBtn = document.getElementById("clearBtn");
+const predictBtn = document.getElementById("predictBtn");
+const predictionCard = document.getElementById("predictionCard");
+const predictionResult = document.getElementById("predictionResult");
 
 function getLogs() {
     const logs = localStorage.getItem(STORAGE_KEY);
@@ -268,6 +271,79 @@ sampleDataBtn.addEventListener("click", function () {
 });
 
 analyzeBtn.addEventListener("click", analyzePatterns);
+
+let predictGrid = null;
+
+async function loadPredictGrid() {
+    if (predictGrid) return predictGrid;
+    const res = await fetch("predict_grid.json");
+    if (!res.ok) throw new Error("Could not load prediction model");
+    predictGrid = await res.json();
+    return predictGrid;
+}
+
+function getPredictionKey(sleep, noise, sugar, screen, routine, meal) {
+    const sleepRounded = Math.round(Math.max(4, Math.min(12, parseFloat(sleep) || 7)) * 2) / 2;
+    return `${sleepRounded}|${noise}|${sugar}|${screen}|${routine}|${meal}`;
+}
+
+function getTopContributors(sleep, noise, sugar, screen, routine, meal) {
+    const contrib = [];
+    if (parseFloat(sleep) < 7) contrib.push("Low sleep (&lt; 7h)");
+    if (noise === "High") contrib.push("High sensory environment");
+    if (noise === "Medium") contrib.push("Medium sensory environment");
+    if (routine === "Yes") contrib.push("Routine change");
+    if (screen === "Yes") contrib.push("Late screen exposure");
+    if (sugar === "Yes") contrib.push("Late sugar intake");
+    if (meal === "Yes") contrib.push("Late meal");
+    return contrib;
+}
+
+predictBtn.addEventListener("click", async function () {
+    const sleep = document.getElementById("sleepHours").value;
+    const noise = document.getElementById("noiseLevel").value;
+    const sugar = document.getElementById("sugarAfter6").value;
+    const screen = document.getElementById("screenAfter7").value;
+    const routine = document.getElementById("routineChange").value;
+    const meal = document.getElementById("mealAfter7").value;
+
+    if (!sleep || !noise || !sugar || !screen || !routine || !meal) {
+        predictionResult.innerHTML = '<div class="warning-box">Please fill in all factors above (Sleep, Sensory Environment, Late Sugar, Late Screen, Routine Change, Late Meal) to get a prediction.</div>';
+        predictionCard.style.display = "block";
+        predictionCard.scrollIntoView({ behavior: "smooth" });
+        return;
+    }
+
+    try {
+        predictBtn.disabled = true;
+        await loadPredictGrid();
+        const key = getPredictionKey(sleep, noise, sugar, screen, routine, meal);
+        const pred = predictGrid[key];
+        if (!pred) {
+            predictionResult.innerHTML = '<div class="warning-box">Prediction not available for this combination. Try rounding sleep to the nearest half hour.</div>';
+        } else {
+            const tierClass = pred.tier === "Low" ? "insight-box" : pred.tier === "Medium" ? "warning-box" : "disclaimer-box";
+            const contributors = getTopContributors(sleep, noise, sugar, screen, routine, meal);
+            const contribHtml = contributors.length ? `<br><br><strong>Risk factors today:</strong> ${contributors.join(", ")}` : "";
+            predictionResult.innerHTML = `
+                <div class="${tierClass}">
+                    <strong>Estimated meltdown likelihood: ${pred.probability}%</strong>
+                    <br>Risk level: <strong>${pred.tier}</strong>${contribHtml}
+                </div>
+                <div class="disclaimer-box">
+                    <strong>Note:</strong> This is an estimate based on patterns in research. It does not predict behavior with certainty. Use it to plan, not to diagnose.
+                </div>
+            `;
+        }
+        predictionCard.style.display = "block";
+        predictionCard.scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+        predictionResult.innerHTML = '<div class="warning-box">Prediction model could not be loaded. Make sure predict_grid.json is available.</div>';
+        predictionCard.style.display = "block";
+    } finally {
+        predictBtn.disabled = false;
+    }
+});
 
 clearBtn.addEventListener("click", function () {
     localStorage.removeItem(STORAGE_KEY);

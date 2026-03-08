@@ -3,3 +3,4 @@ node_modules/
 synthetic-data-generator/synthetic_logs.json
 model-training/model.pkl
 model-training/metrics.json
+# predict_grid.json is committed (needed for frontend)

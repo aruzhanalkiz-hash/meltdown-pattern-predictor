@@ -10,7 +10,7 @@ Built at **Ada Hacks**.
 
 ---
 
-## 😰 The Problem
+## 🧭 The Problem
 
 Caregivers of autistic children often feel like they're navigating meltdowns in the dark. A difficult day happens, and in the moment it's hard to pinpoint *why*—Was it the lack of sleep? The loud environment? The change in routine? The late-night screen time?
 
@@ -27,6 +27,7 @@ Without data, it's guesswork. Families replay events in their heads, wonder what
 ### ✨ What We Built
 
 - 📝 **Daily Logging** – Quick, structured entries for sleep hours, sensory environment (noise level), late sugar, late screens, routine changes, late meals, and meltdown occurrence
+- 🔮 **Risk Prediction** – AI model estimates meltdown likelihood from today's factors (sleep, noise, routine, etc.)
 - 📊 **Pattern Analysis** – After a few logs, the app computes meltdown rates across each factor and ranks the most likely triggers
 - 🧠 **Data-Driven Insights** – No more relying on memory. See exactly which conditions preceded meltdowns
 - 🔒 **Privacy-First** – Everything stays in your browser. No accounts, no servers, no data leaving your device
@@ -45,8 +46,9 @@ Parents, guardians, and caregivers of children on the autism spectrum who want t
 2. **For AI help:** Add your OpenAI API key in `config.js`
 3. Open `index.html` in a web browser
 4. Add daily logs—or click **Load Sample Data** to see how it works
-5. Click **Analyze Patterns** to view insights
-6. Click the **Help** button (bottom-right) for AI assistance
+5. Click **Predict Risk** to get an estimated meltdown likelihood for today's factors
+6. Click **Analyze Patterns** to view insights from your saved logs
+7. Click the **Help** button (bottom-right) for AI assistance
 
 **Deploy on Vercel:**
 1. Push to GitHub and import the repo in Vercel
