@@ -20,6 +20,11 @@ Without data, it's guesswork. Families replay events in their heads, wonder what
 
 ---
 
+## Team)
+
+1. Rumaiza Norova
+2. Aruzhan Kapsemetova
+
 ## 💡 Our Solution
 
 **Meltdown Pattern Predictor** turns guesswork into insight. Caregivers log simple daily factors—sleep, sensory environment, routine changes, late meals, screen time—and whether a meltdown occurred. Our tool analyzes the data and surfaces which conditions correlate most strongly with meltdowns.
